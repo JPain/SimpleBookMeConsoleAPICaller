@@ -17,34 +17,54 @@ namespace BookItForMe
             var baseUrl = "http://user-api.simplybook.me";
             var ApiKey = "3533573756a1e9e08245db98a8b2752240649e0ccd0e331f85407c5788ba68ad";
             var Secret = "2742dffc3c60af8e42cfa4cce84ab731bcd2483f79adb87331746081448801b3";
-            var tokenKey = GetTokenKey(baseUrl, ApiKey);
+            var token = GetToken(baseUrl, ApiKey);
+            Console.WriteLine("Token: " + token);
+
+            var apiClient = new Client(baseUrl + "/");
             Console.ReadKey();
         }
 
-        static string GetTokenKey(string baseUrl, string ApiKey)
+        static string GetToken(string baseUrl, string ApiKey)
         {
             using (Client rpcClient = new Client(baseUrl + "/login"))
             {
-                JToken x = JToken.Parse("{companyLogin: 'doctorpain', apiKey: '3533573756a1e9e08245db98a8b2752240649e0ccd0e331f85407c5788ba68ad'}");
-                Request request = rpcClient.NewRequest("getToken", x);
+                var tokenParams = new tokenParams
+                {
+                    companyLogin = "doctorpain",
+                    ApiKey = ApiKey
+                };
+                
+                Request request = rpcClient.NewRequest("getToken", JToken.FromObject(tokenParams));
                 GenericResponse response = rpcClient.Rpc(request);
-                JToken result;
+
                 if (response.Result != null)
                 {
-                    result = response.Result;
-                }
-                else
-                {
-                    Console.WriteLine(string.Format("Error in response, code:{0} message:{1}", 
-                        response.Error.Code, 
-                        response.Error.Message));
-                    return "";
+                    return response.Result.ToString();
                 }
 
-                Console.WriteLine(result.ToString());
-                    
+                
+                throw new BadResponseException(string.Format("Error in response, code:{0} message:{1}",
+                    response.Error.Code,
+                    response.Error.Message));
             }
-            return "abc123";
+        }
+
+        private class tokenParams
+        {
+            public string companyLogin { get; set; }
+            public string ApiKey { get; set; }
+        }
+
+
+        [Serializable]
+        public class BadResponseException : Exception
+        {
+            public BadResponseException() { }
+            public BadResponseException(string message) : base(message) { }
+            public BadResponseException(string message, Exception inner) : base(message, inner) { }
+            protected BadResponseException(
+              System.Runtime.Serialization.SerializationInfo info,
+              System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
         }
     }
 }
