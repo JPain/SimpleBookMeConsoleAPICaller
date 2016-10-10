@@ -14,27 +14,48 @@ namespace BookItForMe
 
         static void Main(string[] args)
         {
+            //START init variables
             var baseUrl = "http://user-api.simplybook.me";
-            var ApiKey = "3533573756a1e9e08245db98a8b2752240649e0ccd0e331f85407c5788ba68ad";
-            var Secret = "2742dffc3c60af8e42cfa4cce84ab731bcd2483f79adb87331746081448801b3";
-            var token = GetToken(baseUrl, ApiKey);
+            var companyLogin = "doctorpain";
+            var userLogin = "admin";
+            var userPassword = "pandaeyes";
+            //END init variables
+
+            //Get API token
+            var token = GetToken(baseUrl, companyLogin, userLogin, userPassword);
             Console.WriteLine("Token: " + token);
 
-            var apiClient = new Client(baseUrl + "/");
+            //Init API client
+            var apiClient = new Client(baseUrl + "/admin/");
+            apiClient.Headers.Add("X-Company-Login", companyLogin);
+            apiClient.Headers.Add("X-User-Token", token);
+            
+            Request request = apiClient.NewRequest("getBookingsZapier");
+            GenericResponse response = apiClient.Rpc(request);
+            if (response.Result != null)
+            {
+                Console.WriteLine(response.Result.ToString());
+            }
+            else
+            {
+                throw new BadResponseException("ERROR No response from getEventList");
+            }
+
             Console.ReadKey();
         }
 
-        static string GetToken(string baseUrl, string ApiKey)
+        static string GetToken(string baseUrl, string companyLogin, string userLogin, string userPassword)
         {
             using (Client rpcClient = new Client(baseUrl + "/login"))
             {
                 var tokenParams = new tokenParams
                 {
-                    companyLogin = "doctorpain",
-                    ApiKey = ApiKey
+                    companyLogin = companyLogin,
+                    userLogin = userLogin,
+                    userPassword = userPassword
                 };
                 
-                Request request = rpcClient.NewRequest("getToken", JToken.FromObject(tokenParams));
+                Request request = rpcClient.NewRequest("getUserToken", JToken.FromObject(tokenParams));
                 GenericResponse response = rpcClient.Rpc(request);
 
                 if (response.Result != null)
@@ -52,9 +73,14 @@ namespace BookItForMe
         private class tokenParams
         {
             public string companyLogin { get; set; }
-            public string ApiKey { get; set; }
+            public string userLogin { get; set; }
+            public string userPassword { get; set; }
         }
 
+        private class getBookingsParams
+        {
+            public Array[] param { get; set; }
+        }
 
         [Serializable]
         public class BadResponseException : Exception
